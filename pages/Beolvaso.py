@@ -18,22 +18,24 @@ with col1:
     st.divider()
     
     if data_xlsx != None:
-        data = pd.read_excel(data_xlsx)
-        col_name = data.columns.to_list()
+        df = pd.read_excel(data_xlsx)
+        col_name = df.columns.to_list()
         container = st.container()
-        select_all = st.checkbox("Összes kijelölése", default=True)
+        select_all = st.checkbox("Összes kijelölése")
         
         if select_all:
             selected_col = container.multiselect('Kiválasztott oszlopok', col_name, default=col_name)
         else:
             selected_col = container.multiselect('Kiválasztott oszlopok', col_name)
-
+        if 'df' not in st.session_state:
+            st.session_state.df = df
 
 with col2:
     st.subheader('Excel előlnézet')
     if data_xlsx != None:
-        filtered_data = data.loc[:,selected_col]
+        filtered_data = df.loc[:,selected_col]
         st.dataframe(filtered_data, hide_index=True)
     else:
         st.write('')
         st.write('A fájl feltöltését követően látható az előnézet!')
+    
