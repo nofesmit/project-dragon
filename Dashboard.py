@@ -5,8 +5,13 @@ import plotly.express as px
 st.title('Project Dragon')
 
 import streamlit as st
-import os
 import importlib
+import sys
+from pathlib import Path
+
+# Ensure the 'pages' directory is in the sys.path
+pages_dir = Path(__file__).parent / 'pages'
+sys.path.append(str(pages_dir))
 
 # Create a session state to store the dataframe
 if 'dataframe' not in st.session_state:
@@ -15,10 +20,10 @@ if 'dataframe' not in st.session_state:
 st.title('Multi-Page Streamlit App')
 
 PAGES = {
-    "Data Uploader": "pages.data_uploader",
-    "Data Viewer": "pages.data_viewer",
-    "Data Filter": "pages.data_filter",
-    "Data Analysis": "pages.data_analysis"
+    "Data Uploader": "data_uploader",
+    "Data Viewer": "data_viewer",
+    "Data Filter": "data_filter",
+    "Data Analysis": "data_analysis"
 }
 
 # Sidebar for navigation
