@@ -14,11 +14,11 @@ with col1:
     st.write('2. Az első sor az oszlopazonosító')
     st.write('3. Az adat beolvasás az A:1 cellával kezdődik, így az adatnak is ott kell kezdődnie')
     st.write('')
-    data_csv = st.file_uploader('',type=['csv'])
+    data_xlsx = st.file_uploader('',type=['xlsx'])
     st.divider()
     
-    if data_csv != None:
-        data = pd.read_csv(data_csv)
+    if data_xlsx != None:
+        data = pd.read_excel(data_xlsx)
         col_name = data.columns.to_list()
         container = st.container()
         select_all = st.checkbox("Összes kijelölése", default=True)
@@ -31,7 +31,7 @@ with col1:
 
 with col2:
     st.subheader('Excel előlnézet')
-    if data_csv != None:
+    if data_xlsx != None:
         filtered_data = data.loc[:,selected_col]
         st.dataframe(filtered_data, hide_index=True)
     else:
