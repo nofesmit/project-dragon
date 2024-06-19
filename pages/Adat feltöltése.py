@@ -6,18 +6,14 @@ st.set_page_config(page_title="Beolvaso", layout="wide")
 
 # ---- CACHEING ---
 
-@st.cache_resource
-def load_data():
-    if 'df_income' in st.session_state:
-        df_income = st.session_state.df_income
-    if 'df_expense' in st.session_state:
-        df_expense = st.session_state.df_expense
-    if 'df_category' in st.session_state:
-        df_category = st.session_state.df_category
-    return df_income, df_expense, df_category
+if 'df_income' not in st.session_state:
+    df_income = []
+if 'df_expense' not in st.session_state:
+    df_expense = []
+if 'df_category' not in st.session_state:
+    df_category = []
 
-load_data()
-
+# ---- MAIN SITE ---
 
 st.header('Adat feltöltés', divider='grey')
 
@@ -71,11 +67,11 @@ with info2:
 st.write('')
 st.subheader('Bevételi adatok', divider='grey')
 
-inc1, inc2, inc3 = st.columns((1,2,2), gap='large')
+inc1, inc2, inc3 = st.columns((2,3,3), gap='large')
 
 with inc1:
     st.write('Bevételi adatok feltöltése')
-    income_xlsx = st.file_uploader('',type=['xlsx'], key=2)
+    income_xlsx = st.file_uploader('',type=['xlsx'], key=1, label_visibility='collapsed')
     
     if income_xlsx != None:
         temp_df_income = pd.read_excel(income_xlsx)
@@ -85,7 +81,7 @@ with inc1:
         if st.button('Bevételi adatok mentése', use_container_width=True):
             df_income = temp_df_income
             del temp_df_income
-            st.session_state.df_income = df_income
+            st.session_state['df_income'] = df_income
             st.rerun()
 
 with inc2:
@@ -98,7 +94,7 @@ with inc2:
 with inc3:
     st.write('Aktív kiadások adatbázis')
     if 'df_income' in st.session_state:
-        df_income = st.session_state.df_income
+        df_income = st.session_state['df_income']
         st.dataframe(df_income, hide_index=True)
 
 # --- EXPANSE DATA ---
@@ -106,11 +102,11 @@ with inc3:
 st.write('')
 st.subheader('Kiadási adatok', divider='grey')
 
-exp1, exp2, exp3 = st.columns((1,2,2), gap='large')
+exp1, exp2, exp3 = st.columns((2,3,3), gap='large')
 
 with exp1:
     st.write('Kiadási adatok feltöltése')
-    expense_xlsx = st.file_uploader('',type=['xlsx'], key=1)
+    expense_xlsx = st.file_uploader('',type=['xlsx'], key=2, label_visibility='collapsed')
     
     if expense_xlsx != None:
         temp_df_expense = pd.read_excel(expense_xlsx)
@@ -120,7 +116,7 @@ with exp1:
         if st.button('Kiadási adatok mentése', use_container_width=True):
             df_expense = temp_df_expense
             del temp_df_expense
-            st.session_state.df_expense = df_expense
+            st.session_state['df_expense'] = df_expense
             st.rerun()
 
 with exp2:
@@ -133,7 +129,7 @@ with exp2:
 with exp3:
     st.write('Aktív kiadások adatbázis')
     if 'df_expense' in st.session_state:
-        df_expense = st.session_state.df_expense
+        df_expense = st.session_state['df_expense']
         st.dataframe(df_expense, hide_index=True)
 
 
@@ -142,11 +138,11 @@ with exp3:
 st.write('')
 st.subheader('Kiadási kategóriák', divider='grey')
 
-cat1, cat2, cat3 = st.columns((1,2,2), gap='large')
+cat1, cat2, cat3 = st.columns((2,3,3), gap='large')
 
 with cat1:
     st.write('Kiadási kategória adatok feltöltése')
-    category_xlsx = st.file_uploader('',type=['xlsx'], key=3)
+    category_xlsx = st.file_uploader('',type=['xlsx'], key=3, label_visibility='collapsed')
     
     if category_xlsx != None:
         temp_df_category = pd.read_excel(category_xlsx)
@@ -156,7 +152,7 @@ with cat1:
         if st.button('Kiadási kategória adatok mentése', use_container_width=True):
             df_category = temp_df_category
             del temp_df_category
-            st.session_state.df_category = df_category
+            st.session_state['df_category'] = df_category
             st.rerun()
 
 with cat2:
@@ -169,5 +165,5 @@ with cat2:
 with cat3:
     st.write('Aktív kiadások adatbázis')
     if 'df_category' in st.session_state:
-        df_category = st.session_state.df_category
+        df_category = st.session_state['df_category']
         st.dataframe(df_category, hide_index=True)
