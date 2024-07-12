@@ -11,14 +11,6 @@ st.set_page_config(page_title="Bevételek", layout="wide")
 
 #Data cleaning
 
-@st.cache_data
-def inc_clean(df_income):
-    df_income = df_income.replace('_x000D_', '', regex=True)
-    df_income = df_income.replace('\n', '', regex=True)
-    df_income = df_income[['Kiállítás','partner','Bizonylat II.','Megjegyzés','Szállítási mód','Cikk','ar','penznem', 'mennyiseg','teljes_ar','HUF_ar','EUR_HUF']]
-    df_income['Kiállítás'] = pd.to_datetime(df_income['Kiállítás'], format='%Y%m%d')
-    df_income['month_year'] = df_income['Kiállítás'].dt.to_period('m')
-    return df_income
 
 #Summary plots
 def plot_metric(value, prefix="", suffix="", show_graph=False, graph_x="", graph_y="", color_graph=""):
@@ -72,11 +64,10 @@ if 'df_income' not in st.session_state:
     st.write('Bevételek vizsgálatához a bevételi adatok feltöltése szükséges!')
 else:
     df_income = st.session_state['df_income']
-    
-    df_income = inc_clean(df_income)
+
 
     st.title('Bevételek')
     
     st.dataframe(df_income)
-    st.write(df_income.dtypes)
-    st.write(df_income['HUF_ar'].sum())
+    #st.write(df_income.dtypes)
+    st.write(df_income['teljes_forintban'].sum())

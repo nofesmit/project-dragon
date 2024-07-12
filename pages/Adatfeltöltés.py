@@ -1,178 +1,299 @@
 import streamlit as st
 import pandas as pd
 
-# ---- CONFIG ----
+# --- CONFIG ---
 st.set_page_config(page_title="Adatfeltöltés", layout="wide")
 
-# ---- CACHEING ---
+# --- SESSION VARIABLES ---
+
+if 'df_inc_data' not in st.session_state:
+    df_inc_data = pd.DataFrame
+else:
+    df_inc_data = st.session_state['df_inc_data']
+
+if 'df_inc_cat' not in st.session_state:
+    df_inc_cat = pd.DataFrame
+else:
+    df_inc_cat = st.session_state['df_inc_cat']
 
 if 'df_income' not in st.session_state:
-    df_income = []
-if 'df_expense' not in st.session_state:
-    df_expense = []
-if 'df_category' not in st.session_state:
-    df_category = []
-if 'df_exp_n_cat' not in st.session_state:
-    df_exp_n_cat = []
+    df_income = pd.DataFrame
+else:
+    df_income = st.session_state['df_income']
 
-# ---- MAIN SITE ---
+if 'df_exp_data' not in st.session_state:
+    df_exp_data = pd.DataFrame
+else:
+    df_exp_data = st.session_state['df_exp_data']
+
+if 'df_exp_cat' not in st.session_state:
+    df_exp_cat = pd.DataFrame
+else:
+    df_exp_cat = st.session_state['df_exp_cat']
+
+if 'df_expense' not in st.session_state:
+    df_expense = pd.DataFrame
+else:
+    df_expense = st.session_state['df_expense']
+
+if 'df_employees' not in st.session_state:
+    df_employees = pd.DataFrame
+else:
+    df_employees = st.session_state['df_employees']
+
+# --- DATAFRAME CLEANING ---
+
+def income_clean(df_inc_data, df_inc_cat):
+    df_income = pd.merge(df_inc_data, df_inc_cat, on='kat_kod', how='left')
+    df_income['year'] = pd.DatetimeIndex(df_income['datum']).year
+    df_income['month'] = pd.DatetimeIndex(df_income['datum']).month
+    df_income['quarter'] = pd.DatetimeIndex(df_income['datum']).quarter
+    return df_income
+
+def expense_clean(df_exp_data, df_exp_cat):
+    df_expense = pd.merge(df_exp_data, df_exp_cat, on='kat_kod', how='left')
+    df_expense['year'] = pd.DatetimeIndex(df_expense['datum']).year
+    df_expense['month'] = pd.DatetimeIndex(df_expense['datum']).month
+    df_expense['quarter'] = pd.DatetimeIndex(df_expense['datum']).quarter
+    return df_expense
+
+# --- MAIN SITE ---
 
 st.header('Adat feltöltés', divider='grey')
 
 st.write('')
 
-st.write('A program teljes használatához 5 különböző excel fájl feltöltése szükséges: bevételi adatok, bevételi kategóriák, kiadási adatok, kiadási kategóriék, létszám adatok')
-
-st.write('')
-
-info1, info2 = st.columns((1,1), gap='large')
+info1, info2 = st.columns((2,1), gap='large')
 
 with info1:
-    st.subheader('Feltöltési útmutató', divider='grey')
-    st.write('1. A feltöltendő excel csak egy munkafüzeten tartalmazhat adatot')
-    st.write('2. Az első sor az oszlopazonosító')
-    st.write('3. Az adat beolvasás az A:1 cellával kezdődik, így az adatnak is ott kell kezdődnie')
-    st.write('4. A feltöltött excel táblákban az első sorban található oszlop neveknek meg kell egyeznie a jobb ooldalt található lenyitható részeken található oszlopnevekkel. Amennyiben ez a feltétel nem teljesül a program nem képes feldolgozni az adatokat!')
+    st.write('1. Ajálnott a minta dokumentum letöltése és annak módosított verziójának visszatöltése!')
+    st.write('2. A vizsgálandó adathalmaz az első munkalapon legyen.')
+    st.write('3. Az első sor az oszlopazonosító, szűrési és paraméterezési adatok.')
+    st.write('4. Az adat beolvasás az A:1 cellával kezdődik, így az adatnak is ott kell kezdődnie')
+    st.write('5. A feltöltött excel táblák az első sorának egyeznie kell a mintában található oszlop nevekkel!')
     
 with info2:
-    st.subheader('Szükséges oszlopok', divider='grey')
-    with st.expander('Bevételi adatok oszlopok'):
-        st.write('Szükséges oszlopok: kelt, netto, cat_code')
-        st.caption('kelt: A kiadás dátuma, ezen érték alapján történik az időbeki szűrés')
-        st.caption('netto: Számla érték, számolandó, összehasonlítandó összeg')
-        st.caption('cat_code: Kategória kód, ez alapján történik a csoportosítás')
-        st.write('Opcionális oszlopok')
-        st.caption('partner: Tartalmazza a partner nevét')
-        st.caption('bizonylat_szam: A számlához tartozó bizonylatszám')
-        st.caption('megjegyzes: Bármilyen, a kiadáshoz fűzütt megjegyzés')
-        st.caption('main_cat: Egyéb kategorizálási lehetőség')
-        st.caption('source: Költségi fizetési formája')
-    with st.expander('Kiadási adatok oszlopok'):
-        st.write('Szükséges oszlopok: kelt, netto, cat_code')
-        st.caption('kelt: A kiadás dátuma, ezen érték alapján történik az időbeki szűrés')
-        st.caption('netto: Számla érték, számolandó, összehasonlítandó összeg')
-        st.caption('cat_code: Kategória kód, ez alapján történik a csoportosítás')
-        st.write('Opcionális oszlopok')
-        st.caption('partner: Tartalmazza a partner nevét')
-        st.caption('bizonylat_szam: A számlához tartozó bizonylatszám')
-        st.caption('megjegyzes: Bármilyen, a kiadáshoz fűzütt megjegyzés')
-        st.caption('main_cat: Egyéb kategorizálási lehetőség')
-        st.caption('source: Költségi fizetési formája')
-    with st.expander('Kiadási kategóriák oszlopok'):
-        st.write('Szükséges oszlopok: Kategória, Alkategória, Elem, cat_code')
-        st.caption('Kategória: Elsődleges kategória')
-        st.caption('Alkategória: Második szintű kategória bontás')
-        st.caption('Elem: Konkrét kategória elem')
-        st.caption('cat_code: Kategória kód, ez alapján történik a csoportosítás')
-        st.write('Opcionális oszlopok')
-        st.caption('Régi kód: Korábban használt kategória kódoláshoz tájékoztatás')
-        st.caption('Leírás: Kategória leírása')
+    #Income data
+    inc_data_templ = 'data/templates/incomes_data_template.xlsx'
+    with open(inc_data_templ, 'rb') as file:
+        inc_data_templ_cont = file.read()   
+    st.download_button(
+        label="Bevételi adat minta",
+        data=inc_data_templ_cont,
+        file_name="bevetel_adat_minta.xlsx",
+        mime='application/excel',
+        use_container_width=True)
+    
+    #Income category
+    inc_cat_templ = 'data/templates/incomes_category_template.xlsx'
+    with open(inc_cat_templ, 'rb') as file:
+        inc_cat_templ_cont = file.read()   
+    st.download_button(
+        label="Bevételi kategória minta",
+        data=inc_cat_templ_cont,
+        file_name="bevetel_kategoria_minta.xlsx",
+        mime='application/excel',
+        use_container_width=True)
+    
+    #Expense data
+    exp_data_templ = 'data/templates/expenses_data_template.xlsx'
+    with open(exp_data_templ, 'rb') as file:
+        exp_data_templ_cont = file.read()   
+    st.download_button(
+        label="Kiadási adat minta",
+        data=exp_data_templ_cont,
+        file_name="kiadas_adat_minta.xlsx",
+        mime='application/excel',
+        use_container_width=True)
+    
+    #Expense category
+    exp_cat_templ = 'data/templates/expenses_category_template.xlsx'
+    with open(exp_cat_templ, 'rb') as file:
+        exp_cat_templ_cont = file.read()   
+    st.download_button(
+        label="Kiadási kategória minta",
+        data=exp_cat_templ_cont,
+        file_name="kiadas_kategoria_minta.xlsx",
+        mime='application/excel',
+        use_container_width=True)
+    
+    #Employee data
+    employee_templ = 'data/templates/employees_template.xlsx'
+    with open(employee_templ, 'rb') as file:
+        employee_templ_cont = file.read()   
+    st.download_button(
+        label="Létszám adat minta",
+        data=employee_templ_cont,
+        file_name="letszam_minta.xlsx",
+        mime='application/excel',
+        use_container_width=True)
+
+# --- DATA CLEANING ---
+
+st.write('')
+st.subheader('Összefűzés', divider='grey')
+
+dcl1, dcl2 = st.columns((1,1), gap='medium')
+
+if df_income.empty:
+    if df_inc_cat.empty or df_inc_data.empty:
+        dcl1.warning('Bevételi adatok összefűzéséhez töltse fel a szükséges táblákat')
+    else:
+        if dcl1.button('Bevételi adatok összefűzése', use_container_width=True):
+            st.session_state['df_income'] = income_clean(df_inc_data, df_inc_cat)
+            st.rerun()
+else:
+    dcl1.success('Bevételi adatok előkészítve')
+    
+if df_expense.empty:
+    if df_exp_cat.empty or df_exp_data.empty:
+        dcl2.warning('Kiadási adatok összefűzéséhez töltse fel a szükséges táblákat')
+    else:
+        if dcl2.button('Kiadási adatok összefűzése', use_container_width=True):
+            st.session_state['df_expense'] = expense_clean(df_exp_data, df_exp_cat)
+            st.rerun()
+else:
+    dcl2.success('Kiadási adatok előkészítve')
+
 
 # --- INCOME DATA ---
 
 st.write('')
 st.subheader('Bevételi adatok', divider='grey')
+inc1, inc2 = st.columns((1,3), gap='medium')
 
-inc1, inc2, inc3 = st.columns((2,3,3), gap='large')
+if df_inc_data.empty:
+    inc1.warning('Hiányzó bevételi adat')
+else:
+    inc1.success('Bevételi adat feltöltve')
 
-with inc1:
-    st.write('Bevételi adatok feltöltése')
-    income_xlsx = st.file_uploader('income',type=['xlsx'], key=1, label_visibility='collapsed')
+if df_inc_cat.empty:
+    inc1.warning('Hiányzó bevételi kategória')
+else:
+    inc1.success('Bevételi kategória feltöltve')
+
+with inc2.expander('Bevételi adatok'):
+
+    inc_data = st.file_uploader('inc_data',type=['xlsx'], key=1, label_visibility='collapsed')
     
-    if income_xlsx != None:
-        temp_df_income = pd.read_excel(income_xlsx)
+    if inc_data != None:
+        df_inc_data_columns = ['partner', 'datum', 'egyseg_ar', 'deviza', 'mennyiseg', 'teljes_ar', 'teljes_forintban', 'EUR_HUF', 'kat_kod']
+        temp_df_inc_data = pd.read_excel(inc_data)
+        if df_inc_data_columns == temp_df_inc_data.columns.to_list():
+            if st.button('Bevételi adatok mentése', use_container_width=True):
+                df_inc_data = temp_df_inc_data
+                del temp_df_inc_data
+                st.session_state['df_inc_data'] = df_inc_data
+                st.rerun()
+        else:
+            st.error('Helytelen oszlopnevek!')
+    if not df_inc_data.empty:
+        st.subheader('Aktív bevételi adatok', divider='grey')
+        st.dataframe(df_inc_data)
 
-        st.divider()
-        
-        if st.button('Bevételi adatok mentése', use_container_width=True):
-            df_income = temp_df_income
-            del temp_df_income
-            st.session_state['df_income'] = df_income
-            st.rerun()
+with inc2.expander('Bevételi kategóriák'):
 
-with inc2:
-    st.write('Előnézet')
-
-    if income_xlsx != None:
-        st.dataframe(temp_df_income, hide_index=True)
+    inc_cat = st.file_uploader('inc_cat',type=['xlsx'], key=2, label_visibility='collapsed')
     
-
-with inc3:
-    st.write('Aktív kiadások adatbázis')
-    if 'df_income' in st.session_state:
-        df_income = st.session_state['df_income']
-        st.dataframe(df_income, hide_index=True)
+    if inc_cat != None:
+        df_inc_cat_columns = ['kategoria', 'alkategoria', 'elem', 'kat_kod']
+        temp_df_inc_cat = pd.read_excel(inc_cat)
+        if df_inc_cat_columns == temp_df_inc_cat.columns.to_list():
+            if st.button('Bevételi kategóriák mentése', use_container_width=True):
+                df_inc_cat = temp_df_inc_cat
+                del temp_df_inc_cat
+                st.session_state['df_inc_cat'] = df_inc_cat
+                st.rerun()
+        else:
+            st.error('Helytelen oszlopnevek!')
+    if not df_inc_cat.empty:
+        st.subheader('Aktív bevételi kategóriák', divider='grey')
+        st.dataframe(df_inc_cat)
 
 # --- EXPANSE DATA ---
 
 st.write('')
-st.title('Kiadási adatok')
-
-st.write('')
 st.subheader('Kiadási adatok', divider='grey')
+exp1, exp2 = st.columns((1,3), gap='medium')
 
-exp1, exp2, exp3 = st.columns((2,3,3), gap='large')
+if df_exp_data.empty:
+    exp1.warning('Hiányzó kiadási adat')
+else:
+    exp1.success('Kiadási adat feltöltve')
 
-with exp1:
-    st.write('Kiadási adatok feltöltése')
-    expense_xlsx = st.file_uploader('expense',type=['xlsx'], key=2, label_visibility='collapsed')
+if df_exp_cat.empty:
+    exp1.warning('Hiányzó kiadási kategória')
+else:
+    exp1.success('Kiadási kategória feltöltve')
+
+with exp2.expander('Kiadási adatok'):
+
+    exp_data = st.file_uploader('exp_data',type=['xlsx'], key=3, label_visibility='collapsed')
     
-    if expense_xlsx != None:
-        temp_df_expense = pd.read_excel(expense_xlsx)
+    if exp_data != None:
+        df_exp_data_columns = ['ID', 'partner', 'bizonylat_szam', 'megjegyzes', 'datum', 'netto', 'kat_kod', 'fo_kat', 'forras']
+        temp_df_exp_data = pd.read_excel(exp_data)
+        if df_exp_data_columns == temp_df_exp_data.columns.to_list():
+            if st.button('Kiadási adatok mentése', use_container_width=True):
+                df_exp_data = temp_df_exp_data
+                df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].apply(lambda x: str(x) if pd.notnull(x) else None)
+                df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].fillna('')
+                df_exp_data['megjegyzes'] = df_exp_data['megjegyzes'].apply(lambda x: str(x) if pd.notnull(x) else None)
+                df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].fillna('')
+                del temp_df_exp_data
+                st.session_state['df_exp_data'] = df_exp_data
+                st.rerun()
+        else:
+            st.error('Helytelen oszlopnevek!')
+    if not df_exp_data.empty:
+        st.subheader('Aktív kiadási adatok', divider='grey')
+        st.dataframe(df_exp_data)
 
-        st.divider()
+with exp2.expander('Kiadási kategóriák'):
+
+    exp_cat = st.file_uploader('exp_cat',type=['xlsx'], key=4, label_visibility='collapsed')
+    
+    if exp_cat != None:
+        df_exp_cat_columns = ['kategoria', 'alkategoria', 'elem', 'kat_kod']
+        temp_df_exp_cat = pd.read_excel(exp_cat)
+        if df_exp_cat_columns == temp_df_exp_cat.columns.to_list():
+            if st.button('Kiadási kategóriák mentése', use_container_width=True):
+                df_exp_cat = temp_df_exp_cat
+                del temp_df_exp_cat
+                st.session_state['df_exp_cat'] = df_exp_cat
+                st.rerun()
+        else:
+            st.error('Helytelen oszlopnevek!')
+    if not df_exp_cat.empty:
+        st.subheader('Aktív kiadási kategóriák', divider='grey')
+        st.dataframe(df_exp_cat)
         
-        if st.button('Kiadási adatok mentése', use_container_width=True):
-            df_expense = temp_df_expense
-            del temp_df_expense
-            st.session_state['df_expense'] = df_expense
-            st.rerun()
-
-with exp2:
-    st.write('Előnézet')
-
-    if expense_xlsx != None:
-        st.dataframe(temp_df_expense, hide_index=True)
-    
-
-with exp3:
-    st.write('Aktív kiadások adatbázis')
-    if 'df_expense' in st.session_state:
-        df_expense = st.session_state['df_expense']
-        st.dataframe(df_expense, hide_index=True)
-
-
-# --- EXPANSE CATEGORY DATA ---
+# --- EMPLOYEE ---
 
 st.write('')
-st.subheader('Kiadási kategóriák', divider='grey')
+st.subheader('Létszám adatok', divider='grey')
+emp1, emp2 = st.columns((1,3), gap='medium')
 
-cat1, cat2, cat3 = st.columns((2,3,3), gap='large')
+if df_employees.empty:
+    emp1.warning('Hiányzó létszám adat')
+else:
+    emp1.success('Létszám adatok feltöltve')
 
-with cat1:
-    st.write('Kiadási kategória adatok feltöltése')
-    category_xlsx = st.file_uploader('category',type=['xlsx'], key=3, label_visibility='collapsed')
+with emp2.expander('Létszám adatok'):
+
+    employees = st.file_uploader('employee',type=['xlsx'], key=5, label_visibility='collapsed')
     
-    if category_xlsx != None:
-        temp_df_category = pd.read_excel(category_xlsx)
-
-        st.divider()
-        
-        if st.button('Kiadási kategória adatok mentése', use_container_width=True):
-            df_category = temp_df_category
-            del temp_df_category
-            st.session_state['df_category'] = df_category
-            st.rerun()
-
-with cat2:
-    with st.expander('Előnézet'):
-
-        if category_xlsx != None:
-            st.dataframe(temp_df_category, hide_index=True)
-        
-
-with cat3:
-    with st.expander('Aktív kiadások adatbázis'):
-        if 'df_category' in st.session_state:
-            df_category = st.session_state['df_category']
-            st.dataframe(df_category, hide_index=True)
+    if employees != None:
+        df_employees_columns = ['datum', 'vam', 'penzugy', 'egyeb', 'osszes']
+        temp_df_employees = pd.read_excel(employees)
+        if df_employees_columns == temp_df_employees.columns.to_list():
+            if st.button('Létszám adatok mentése', use_container_width=True):
+                df_employees = temp_df_employees
+                del temp_df_employees
+                st.session_state['df_employees'] = df_employees
+                st.rerun()
+        else:
+            st.error('Helytelen oszlopnevek!')
+    if not df_employees.empty:
+        st.subheader('Aktív létszám adatok', divider='grey')
+        st.dataframe(df_employees)
