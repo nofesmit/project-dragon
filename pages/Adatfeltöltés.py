@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ---- CONFIG ----
-st.set_page_config(page_title="Beolvaso", layout="wide")
+st.set_page_config(page_title="Adatfeltöltés", layout="wide")
 
 # ---- CACHEING ---
 
@@ -12,10 +12,16 @@ if 'df_expense' not in st.session_state:
     df_expense = []
 if 'df_category' not in st.session_state:
     df_category = []
+if 'df_exp_n_cat' not in st.session_state:
+    df_exp_n_cat = []
 
 # ---- MAIN SITE ---
 
 st.header('Adat feltöltés', divider='grey')
+
+st.write('')
+
+st.write('A program teljes használatához 5 különböző excel fájl feltöltése szükséges: bevételi adatok, bevételi kategóriák, kiadási adatok, kiadási kategóriék, létszám adatok')
 
 st.write('')
 
@@ -71,7 +77,7 @@ inc1, inc2, inc3 = st.columns((2,3,3), gap='large')
 
 with inc1:
     st.write('Bevételi adatok feltöltése')
-    income_xlsx = st.file_uploader('',type=['xlsx'], key=1, label_visibility='collapsed')
+    income_xlsx = st.file_uploader('income',type=['xlsx'], key=1, label_visibility='collapsed')
     
     if income_xlsx != None:
         temp_df_income = pd.read_excel(income_xlsx)
@@ -100,13 +106,16 @@ with inc3:
 # --- EXPANSE DATA ---
 
 st.write('')
+st.title('Kiadási adatok')
+
+st.write('')
 st.subheader('Kiadási adatok', divider='grey')
 
 exp1, exp2, exp3 = st.columns((2,3,3), gap='large')
 
 with exp1:
     st.write('Kiadási adatok feltöltése')
-    expense_xlsx = st.file_uploader('',type=['xlsx'], key=2, label_visibility='collapsed')
+    expense_xlsx = st.file_uploader('expense',type=['xlsx'], key=2, label_visibility='collapsed')
     
     if expense_xlsx != None:
         temp_df_expense = pd.read_excel(expense_xlsx)
@@ -142,7 +151,7 @@ cat1, cat2, cat3 = st.columns((2,3,3), gap='large')
 
 with cat1:
     st.write('Kiadási kategória adatok feltöltése')
-    category_xlsx = st.file_uploader('',type=['xlsx'], key=3, label_visibility='collapsed')
+    category_xlsx = st.file_uploader('category',type=['xlsx'], key=3, label_visibility='collapsed')
     
     if category_xlsx != None:
         temp_df_category = pd.read_excel(category_xlsx)
@@ -156,14 +165,14 @@ with cat1:
             st.rerun()
 
 with cat2:
-    st.write('Előnézet')
+    with st.expander('Előnézet'):
 
-    if category_xlsx != None:
-        st.dataframe(temp_df_category, hide_index=True)
-    
+        if category_xlsx != None:
+            st.dataframe(temp_df_category, hide_index=True)
+        
 
 with cat3:
-    st.write('Aktív kiadások adatbázis')
-    if 'df_category' in st.session_state:
-        df_category = st.session_state['df_category']
-        st.dataframe(df_category, hide_index=True)
+    with st.expander('Aktív kiadások adatbázis'):
+        if 'df_category' in st.session_state:
+            df_category = st.session_state['df_category']
+            st.dataframe(df_category, hide_index=True)
