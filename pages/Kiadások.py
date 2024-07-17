@@ -1,16 +1,285 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+import toml
 
-# ---- CONFIG ----
+# --- CONFIG ----
+
 st.set_page_config(page_title="Kiadások", layout="wide")
 
-# --- PAGE ---
+# --- THEME ---
+
+graph_color = '#6D87BD'
+
+# --- FUNCTIONS ---
+
+def plot_metric(label, value, prefix="", suffix="", show_graph=False, graph_x="", graph_y="", color_graph=""):
+
+    if graph_x is None:
+        graph_x = []
+    if graph_y is None:
+        graph_y = []
+
+    if isinstance(graph_x, pd.Series) and isinstance(graph_x.iloc[0], pd.Period):
+        graph_x = graph_x.astype(str)
+    elif isinstance(graph_x, list) and isinstance(graph_x[0], pd.Period):
+        graph_x = [str(x) for x in graph_x]
+        
+    if isinstance(graph_y, pd.Series) and isinstance(graph_y.iloc[0], pd.Period):
+        graph_y = graph_y.astype(str)
+    elif isinstance(graph_y, list) and isinstance(graph_y[0], pd.Period):
+        graph_y = [str(y) for y in graph_y]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Indicator(
+            value=value,
+            gauge={"axis": {"visible": False}},
+            number={
+                "prefix": prefix,
+                "suffix": suffix,
+                "font.size": 28,
+                'valueformat':',.0f'
+            },
+            domain={'x': [0, 1], 'y': [0.99, 1]}
+        )
+    )
+    
+    if show_graph:
+        fig.add_trace(
+            go.Scatter(
+                x=graph_x,
+                y=graph_y,
+                #hoverinfo="skip",
+                fill="tonexty",
+                fillcolor=color_graph,
+                mode='none'
+            )
+        )
+
+    fig.update_xaxes(visible=True, fixedrange=True)
+    fig.update_yaxes(visible=False, fixedrange=True)
+    fig.update_layout(
+        margin=dict(t=20, b=0),
+        showlegend=False,
+        height=120,
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_top10(label, df, x_data:str, y_data:str, marker_color:str):
+    
+    fig = px.bar(
+        data_frame=df,
+        x=x_data,
+        y=y_data,
+        #title=label,
+        text_auto='.2s'
+    )
+    
+    fig.update_traces(marker_color=marker_color, textangle=0, textposition="outside", cliponaxis=False)
+    fig.update_layout(
+        yaxis={'categoryorder':'total ascending'}
+        )
+    st.plotly_chart(fig, use_container_width=True)
+
+def plot_treemap(label, df):
+    
+    fig = px.treemap(
+        df,
+        path=['kategoria', 'alkategoria', 'elem'],  # Hierarchical path
+        values='netto',  # Assuming 'netto' is the value to visualize
+        #color='netto',  # Optional: Color by 'netto' or another column
+        hover_data={'kat_kod': True}
+    )
+    # Define a custom function to format the 'netto' column
+    #def format_netto(value):
+        #return f'{value:,.0f} Ft'.replace(',', ' ')
+
+    # Apply the custom function to format the 'netto' values in the DataFrame
+    #df['formatted_netto'] = df['netto'].apply(format_netto)
+    
+    # Customize the layout if necessary
+    fig.update_layout(
+        title='Treemap of Kategoria, Alkategoria, and Elem',
+        #margin=dict(t=50, l=25, r=25, b=25)
+    )
+    
+    fig.update_traces(
+    hovertemplate='<b>%{label}</b><br>' + 
+                  'Netto: %{value} Ft<extra></extra>',
+    #customdata=df[['formatted_netto']].values
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- SESSION VARIABLES ---
 
 if 'df_expense' not in st.session_state:
     st.title('Az adatok vizsgálatához először töltsön fel vizsgálandó adatot.')
     st.write('Bevételek vizsgálatához a bevételi adatok feltöltése szükséges!')
+else:
+    df = st.session_state['df_expense']
 
-df_expense = st.session_state['df_expense']
+# --- PAGE ---
 
-st.header('Kiadasok', divider='grey')
+    st.title('Kiadások')
     
+    # --- FILTERING ---
+    with st.expander('Szűrési feltételek kiválasztása'):
+        #st.markdown('**A szűrési feltételek kiválaszhatók a legürgülő listából, de a mezőbe kattintva be lehet írni a keresett elemet, majd arra rákattintva kiválasztani.**')
+        yfcol1, yfcol2, yfcol3 = st.columns((1,1,1), gap='medium')
+        cfcol1, cfcol2, cfcol3 = st.columns((1,1,1), gap='medium')
+        cfcol4, cfcol5 = st.columns((1,1), gap='medium')
+        pfcol1, pfcol2, pfcol3 = st.columns((0.1,10,0.1))
+    
+    # --- TIME FILTERS ---
+
+    quarter_mapping = {'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4}
+    months_in_quarter = {
+        1: [1, 2, 3],
+        2: [4, 5, 6],
+        3: [7, 8, 9],
+        4: [10, 11, 12]}
+    month_names = { 1: 'Január', 2: 'Február', 3: 'Március', 4: 'Április', 5: 'Május', 6: 'Június', 7: 'Július', 8: 'Augusztus', 9: 'Szeptember', 10: 'Október', 11: 'November', 12: 'December'}
+    year = sorted(df['year'].unique())
+    years = yfcol1.multiselect('Tárgyév', options=year, placeholder='Válassz évet',)
+    if len(years) == 0:
+        years = sorted(df['year'].unique())
+
+    quarters = yfcol2.multiselect('Negyedév', options=quarter_mapping, placeholder='Válassz negyedévet')
+    selected_quarters = [quarter_mapping[q] for q in quarters]
+    if len(selected_quarters) == 0:
+        selected_quarters = sorted(df['quarter'].unique())
+    
+    available_months = set()
+    for q in selected_quarters:
+        available_months.update(months_in_quarter[q])
+        
+    available_month_names = [month_names[m] for m in available_months]
+    
+    months = yfcol3.multiselect('Hónap', options=available_month_names, placeholder='Válassz hónapot')
+    selected_months = [k for k, v in month_names.items() if v in months]
+    if len(selected_months) == 0:
+        selected_months = sorted(df['month'].unique())
+
+    # --- CATEGORY FILTERS ---
+
+    kategoria = sorted(df['kategoria'].unique())
+    kategoriak = cfcol1.multiselect('Kategória', options=kategoria, placeholder='Válassz kategóriát')
+    if "Mind" in kategoriak or len(kategoriak) == 0:
+        kategoriak = sorted(df['kategoria'].unique())
+
+    alkategoria = sorted(df.loc[df['kategoria'].isin(kategoriak), 'alkategoria'].unique())
+    alkategoriak = cfcol2.multiselect('Válassz alkategóriát:', options=alkategoria, placeholder='Válassz alkategóriát')
+    if "Mind" in alkategoriak or len(alkategoriak) == 0:
+        alkategoriak = sorted(df['alkategoria'].unique())
+        
+    elem = sorted(df.loc[df['alkategoria'].isin(alkategoriak), 'elem'].unique())
+    elemek = cfcol3.multiselect('Kategória elem', options=elem, placeholder='Válassz kategória elemet')
+    if "Mind" in elemek or len(elemek) == 0:
+        elemek = sorted(df['elem'].unique())
+
+    fo_kat = sorted(df['fo_kat'].unique())
+    fo_katok = cfcol4.multiselect('Fő kategória', options=fo_kat, placeholder='Válassz fő kategóriát', help='A 0. kategória a nem besorolt!')
+    if "Mind" in fo_katok or len(fo_katok) == 0:
+        fo_katok = sorted(df['fo_kat'].unique())
+    
+    kat_kod = sorted(df['kat_kod'].unique())
+    kat_kodok = cfcol5.multiselect('Válassz kategória kódot:', options=kat_kod, placeholder='Válassz kategória kódot')
+    if "Mind" in kat_kodok or len(kat_kodok) == 0:
+        kat_kodok = sorted(df['kat_kod'].unique())
+
+    partner = sorted(df['partner'].unique())
+    partnerek = pfcol2.multiselect('Válassz partnert:', options=partner, placeholder='Válassz partnert')
+    if "Mind" in partnerek or len(partnerek) == 0:
+        partnerek = sorted(df['partner'].unique())
+
+    selected_df = df[
+        (df['year'].isin(years)) &
+        (df['quarter'].isin(selected_quarters)) &
+        (df['month'].isin(selected_months)) &
+        (df['fo_kat'].isin(fo_katok)) &
+        (df['kat_kod'].isin(kat_kodok)) &
+        (df['kategoria'].isin(kategoriak)) &
+        (df['alkategoria'].isin(alkategoriak)) &
+        (df['elem'].isin(elemek)) &
+        (df['partner'].isin(partnerek))]
+
+    if selected_df.empty:
+        st.divider()
+        st.subheader('A kiválasztott szűrési feltételeknek megfelelő adat nem létezik, válaszonn másik szűrési feltételeket az adatok elemzéséhez!')
+    else:
+        
+        # --- VISUALISATION ---
+        scol1, scol2 = st.columns((1,1))
+        
+        # --- TOTAL EXPENSE ---
+
+        with scol1:
+            
+            total_df = selected_df.groupby(['month_year'], as_index=False)['netto'].sum().round(0)
+            total_expense = selected_df['netto'].sum().round(0)
+            
+            st.subheader('Teljes kiadás', divider='grey')
+            plot_metric(
+                label='Teljes kiadás',
+                value=total_expense,
+                suffix=' Ft',
+                show_graph=True,
+                graph_x=total_df['month_year'],
+                graph_y=total_df['netto'],
+                color_graph=graph_color
+            )
+
+        # --- TOTAL COUNT ---
+        
+        with scol2:
+            
+            count_df = selected_df.groupby(['month_year'], as_index=False)['partner'].count()
+            total_count = selected_df['partner'].count()
+            
+            st.subheader('Darabszám', divider='grey')
+            plot_metric(
+                label='Teljes darabszám',
+                value=total_count,
+                suffix=' db',
+                show_graph=True,
+                graph_x=count_df['month_year'],
+                graph_y=count_df['partner'],
+                color_graph=graph_color
+            )
+        
+        # --- SUM CATEGORY ---
+        
+        st.subheader('kategoria osszesites', divider='gray')
+
+        summ_category = selected_df[['kategoria', 'netto']].groupby('kategoria', as_index=False).sum().sort_values('netto',ascending=False)
+
+        plot_top10(
+            label='osszesitett kategoria',
+            df=summ_category,
+            x_data='netto',
+            y_data='kategoria',
+            marker_color=graph_color
+        )
+        
+        # --- SUM SUBCATEGORY ---
+        
+        st.subheader('alkategoria osszesites', divider='gray')
+
+        summ_category = selected_df[['alkategoria', 'netto']].groupby('alkategoria', as_index=False).sum().sort_values('netto',ascending=False)
+
+        plot_top10(
+            label='osszesitett kategoria',
+            df=summ_category,
+            x_data='netto',
+            y_data='alkategoria',
+            marker_color=graph_color
+        )        
+        
+        plot_treemap('valami',selected_df)
+        
+        st.data_editor(selected_df)

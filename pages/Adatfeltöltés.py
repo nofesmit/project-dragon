@@ -55,6 +55,22 @@ def expense_clean(df_exp_data, df_exp_cat):
     df_expense['year'] = pd.DatetimeIndex(df_expense['datum']).year
     df_expense['month'] = pd.DatetimeIndex(df_expense['datum']).month
     df_expense['quarter'] = pd.DatetimeIndex(df_expense['datum']).quarter
+    df_expense['month_year'] = df_expense['datum'].dt.to_period('m')
+    
+    df_expense['bizonylat_szam'] = df_expense['bizonylat_szam'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['bizonylat_szam'] = df_expense['bizonylat_szam'].fillna('')
+    df_expense['megjegyzes'] = df_expense['megjegyzes'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['megjegyzes'] = df_expense['megjegyzes'].fillna('')
+    
+    df_expense['kat_kod'] = df_expense['kat_kod'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['kat_kod'] = df_expense['kat_kod'].fillna('hiányos')
+    df_expense['fo_kat'] = pd.to_numeric(df_expense['fo_kat'], errors='coerce').fillna(0).astype(int)
+    df_expense['kategoria'] = df_expense['kategoria'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['kategoria'] = df_expense['kategoria'].fillna('hiányos')
+    df_expense['alkategoria'] = df_expense['alkategoria'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['alkategoria'] = df_expense['alkategoria'].fillna('hiányos')
+    df_expense['elem'] = df_expense['elem'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_expense['elem'] = df_expense['elem'].fillna('hiányos')
     return df_expense
 
 # --- MAIN SITE ---
@@ -74,55 +90,55 @@ with info1:
     
 with info2:
     #Income data
-    inc_data_templ = 'data/templates/incomes_data_template.xlsx'
+    inc_data_templ = 'templates/incomes_data_template.xlsx'
     with open(inc_data_templ, 'rb') as file:
         inc_data_templ_cont = file.read()   
     st.download_button(
-        label="Bevételi adat minta",
+        label="Bevételi adat minta letöltése",
         data=inc_data_templ_cont,
         file_name="bevetel_adat_minta.xlsx",
         mime='application/excel',
         use_container_width=True)
     
     #Income category
-    inc_cat_templ = 'data/templates/incomes_category_template.xlsx'
+    inc_cat_templ = 'templates/incomes_category_template.xlsx'
     with open(inc_cat_templ, 'rb') as file:
         inc_cat_templ_cont = file.read()   
     st.download_button(
-        label="Bevételi kategória minta",
+        label="Bevételi kategória minta letöltése",
         data=inc_cat_templ_cont,
         file_name="bevetel_kategoria_minta.xlsx",
         mime='application/excel',
         use_container_width=True)
     
     #Expense data
-    exp_data_templ = 'data/templates/expenses_data_template.xlsx'
+    exp_data_templ = 'templates/expenses_data_template.xlsx'
     with open(exp_data_templ, 'rb') as file:
         exp_data_templ_cont = file.read()   
     st.download_button(
-        label="Kiadási adat minta",
+        label="Kiadási adat minta letöltése",
         data=exp_data_templ_cont,
         file_name="kiadas_adat_minta.xlsx",
         mime='application/excel',
         use_container_width=True)
     
     #Expense category
-    exp_cat_templ = 'data/templates/expenses_category_template.xlsx'
+    exp_cat_templ = 'templates/expenses_category_template.xlsx'
     with open(exp_cat_templ, 'rb') as file:
         exp_cat_templ_cont = file.read()   
     st.download_button(
-        label="Kiadási kategória minta",
+        label="Kiadási kategória minta letöltése",
         data=exp_cat_templ_cont,
         file_name="kiadas_kategoria_minta.xlsx",
         mime='application/excel',
         use_container_width=True)
     
     #Employee data
-    employee_templ = 'data/templates/employees_template.xlsx'
+    employee_templ = 'templates/employees_template.xlsx'
     with open(employee_templ, 'rb') as file:
         employee_templ_cont = file.read()   
     st.download_button(
-        label="Létszám adat minta",
+        label="Létszám adat minta letöltése",
         data=employee_templ_cont,
         file_name="letszam_minta.xlsx",
         mime='application/excel',
@@ -239,7 +255,8 @@ with exp2.expander('Kiadási adatok'):
                 df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].apply(lambda x: str(x) if pd.notnull(x) else None)
                 df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].fillna('')
                 df_exp_data['megjegyzes'] = df_exp_data['megjegyzes'].apply(lambda x: str(x) if pd.notnull(x) else None)
-                df_exp_data['bizonylat_szam'] = df_exp_data['bizonylat_szam'].fillna('')
+                df_exp_data['megjegyzes'] = df_exp_data['megjegyzes'].fillna('')
+                df_exp_data['kat_kod'] = df_exp_data['kat_kod'].str.strip()
                 del temp_df_exp_data
                 st.session_state['df_exp_data'] = df_exp_data
                 st.rerun()
@@ -259,6 +276,7 @@ with exp2.expander('Kiadási kategóriák'):
         if df_exp_cat_columns == temp_df_exp_cat.columns.to_list():
             if st.button('Kiadási kategóriák mentése', use_container_width=True):
                 df_exp_cat = temp_df_exp_cat
+                df_exp_cat['kat_kod'] = df_exp_cat['kat_kod'].str.strip()
                 del temp_df_exp_cat
                 st.session_state['df_exp_cat'] = df_exp_cat
                 st.rerun()
