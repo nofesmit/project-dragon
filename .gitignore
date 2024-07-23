@@ -1,5 +1,7 @@
 .DS_Store
 templates/
+docker_files/
+Dockerfile
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

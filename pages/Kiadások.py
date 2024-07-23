@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 import toml
 
 # --- CONFIG ----
@@ -69,7 +70,7 @@ def plot_metric(label, value, prefix="", suffix="", show_graph=False, graph_x=""
     
     st.plotly_chart(fig, use_container_width=True)
 
-def plot_top10(label, df, x_data:str, y_data:str, marker_color:str):
+def plot_top10(df, x_data:str, y_data:str, marker_color:str):
     
     fig = px.bar(
         data_frame=df,
@@ -85,35 +86,102 @@ def plot_top10(label, df, x_data:str, y_data:str, marker_color:str):
         )
     st.plotly_chart(fig, use_container_width=True)
 
-def plot_treemap(label, df):
-    
-    fig = px.treemap(
-        df,
-        path=['kategoria', 'alkategoria', 'elem'],  # Hierarchical path
-        values='netto',  # Assuming 'netto' is the value to visualize
-        #color='netto',  # Optional: Color by 'netto' or another column
-        hover_data={'kat_kod': True}
+def detailed_bar(df, x_data:str, y_data:str, color:str):
+    fig = px.bar(
+        data_frame=df,
+        x=x_data,
+        y=y_data,
+        color=color,
+        text_auto='.2s',
+        color_discrete_sequence= px.colors.qualitative.T10
     )
-    # Define a custom function to format the 'netto' column
-    #def format_netto(value):
-        #return f'{value:,.0f} Ft'.replace(',', ' ')
-
-    # Apply the custom function to format the 'netto' values in the DataFrame
-    #df['formatted_netto'] = df['netto'].apply(format_netto)
-    
-    # Customize the layout if necessary
+    fig.update_traces(textangle=0, textposition="outside", cliponaxis=False)
     fig.update_layout(
-        title='Treemap of Kategoria, Alkategoria, and Elem',
-        #margin=dict(t=50, l=25, r=25, b=25)
+        yaxis={'categoryorder':'total ascending'}
+        )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def sunburst(df):
+
+    fig = px.sunburst(
+        data_frame=df,
+        path=['kategoria', 'alkategoria', 'elem'],
+        values='netto',
+        color_discrete_sequence= px.colors.qualitative.T10
     )
     
+    fig.update_layout(
+        #title='Treemap of Kategoria, Alkategoria, and Elem',
+        margin=dict(t=20, l=10, r=10, b=10),
+        height=800
+    )
+
     fig.update_traces(
-    hovertemplate='<b>%{label}</b><br>' + 
-                  'Netto: %{value} Ft<extra></extra>',
-    #customdata=df[['formatted_netto']].values
+        hovertemplate='<b>%{label}</b>' + 
+                    '<br>Netto: %{value: ,.0d} Ft<extra></extra>',
     )
     
     st.plotly_chart(fig, use_container_width=True)
+
+def plot_treemap(df):
+    
+    fig = px.treemap(
+        df,
+        path=['kategoria', 'alkategoria', 'elem'],
+        values='netto',
+        hover_data={'kat_kod':True},
+        color_discrete_sequence=px.colors.qualitative.T10
+    )
+
+    fig.update_layout(
+        #title='Treemap of Kategoria, Alkategoria, and Elem',
+        margin=dict(t=20, l=10, r=10, b=10),
+        height=500
+    )
+
+    fig.update_traces(
+        hovertemplate='<b>%{label}</b>' + 
+                    '<br>Netto: %{value: ,.0d} Ft<extra></extra>' +
+                    '<br>Kategória kód: %{customdata[0]}',
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+    
+def comparison(df):
+
+    # Monthly comparison
+    monthly_data = selected_df.groupby(['year', 'month'])['netto'].sum().reset_index()
+
+    # Quarterly comparison
+    quarterly_data = selected_df.groupby(['year', 'quarter'])['netto'].sum().reset_index()
+    
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("Monthly Cost Comparison", "Quarterly Cost Comparison"),
+        shared_yaxes=False
+    )
+
+    # Add monthly data to subplot
+    for year in comp_selected_years:
+        year_data = monthly_data[monthly_data['year'] == year]
+        fig.add_trace(
+            go.Bar(x=year_data['month'], y=year_data['netto'], name=f"Year {year}", legendgroup=f"Year {year}"),
+            row=1, col=1
+        )
+
+    # Add quarterly data to subplot
+    for year in comp_selected_years:
+        year_data = quarterly_data[quarterly_data['year'] == year]
+        fig.add_trace(
+            go.Bar(x=year_data['quarter'], y=year_data['netto'], name=f"Year {year}", legendgroup=f"Year {year}"),
+            row=1, col=2
+        )
+
+    # Update layout
+    fig.update_layout(barmode='group', title="Monthly and Quarterly Cost Comparison", showlegend=True)
+
+    st.plotly_chart(fig)
 
 # --- SESSION VARIABLES ---
 
@@ -133,7 +201,7 @@ else:
         yfcol1, yfcol2, yfcol3 = st.columns((1,1,1), gap='medium')
         cfcol1, cfcol2, cfcol3 = st.columns((1,1,1), gap='medium')
         cfcol4, cfcol5 = st.columns((1,1), gap='medium')
-        pfcol1, pfcol2, pfcol3 = st.columns((0.1,10,0.1))
+        pfcol1, pfcol2, = st.columns((10,2))
     
     # --- TIME FILTERS ---
 
@@ -193,20 +261,34 @@ else:
         kat_kodok = sorted(df['kat_kod'].unique())
 
     partner = sorted(df['partner'].unique())
-    partnerek = pfcol2.multiselect('Válassz partnert:', options=partner, placeholder='Válassz partnert')
+    partnerek = pfcol1.multiselect('Válassz partnert:', options=partner, placeholder='Válassz partnert')
     if "Mind" in partnerek or len(partnerek) == 0:
         partnerek = sorted(df['partner'].unique())
 
-    selected_df = df[
-        (df['year'].isin(years)) &
-        (df['quarter'].isin(selected_quarters)) &
-        (df['month'].isin(selected_months)) &
-        (df['fo_kat'].isin(fo_katok)) &
-        (df['kat_kod'].isin(kat_kodok)) &
-        (df['kategoria'].isin(kategoriak)) &
-        (df['alkategoria'].isin(alkategoriak)) &
-        (df['elem'].isin(elemek)) &
-        (df['partner'].isin(partnerek))]
+    in_or_not = pfcol2.selectbox('Szűrés típusa:', options=['Tartalmazza','Kivéve'])
+    
+    if in_or_not == 'Tartalmazza':
+        selected_df = df[
+            (df['year'].isin(years)) &
+            (df['quarter'].isin(selected_quarters)) &
+            (df['month'].isin(selected_months)) &
+            (df['fo_kat'].isin(fo_katok)) &
+            (df['kat_kod'].isin(kat_kodok)) &
+            (df['kategoria'].isin(kategoriak)) &
+            (df['alkategoria'].isin(alkategoriak)) &
+            (df['elem'].isin(elemek)) &
+            (df['partner'].isin(partnerek))]
+    elif in_or_not == 'Kivéve':
+       selected_df = df[
+            (~df['year'].isin(years)) |
+            (~df['quarter'].isin(selected_quarters)) |
+            (~df['month'].isin(selected_months)) |
+            (~df['fo_kat'].isin(fo_katok)) |
+            (~df['kat_kod'].isin(kat_kodok)) |
+            (~df['kategoria'].isin(kategoriak)) |
+            (~df['alkategoria'].isin(alkategoriak)) |
+            (~df['elem'].isin(elemek)) |
+            (~df['partner'].isin(partnerek))] 
 
     if selected_df.empty:
         st.divider()
@@ -214,7 +296,7 @@ else:
     else:
         
         # --- VISUALISATION ---
-        scol1, scol2 = st.columns((1,1))
+        scol1, scol2 = st.columns((1,2))
         
         # --- TOTAL EXPENSE ---
 
@@ -228,7 +310,7 @@ else:
                 label='Teljes kiadás',
                 value=total_expense,
                 suffix=' Ft',
-                show_graph=True,
+                show_graph=False,
                 graph_x=total_df['month_year'],
                 graph_y=total_df['netto'],
                 color_graph=graph_color
@@ -236,7 +318,7 @@ else:
 
         # --- TOTAL COUNT ---
         
-        with scol2:
+        with scol1:
             
             count_df = selected_df.groupby(['month_year'], as_index=False)['partner'].count()
             total_count = selected_df['partner'].count()
@@ -246,40 +328,112 @@ else:
                 label='Teljes darabszám',
                 value=total_count,
                 suffix=' db',
-                show_graph=True,
+                show_graph=False,
                 graph_x=count_df['month_year'],
                 graph_y=count_df['partner'],
                 color_graph=graph_color
             )
         
+        # --- SUNBURST ---
+        
+        with scol2:
+            
+            sunburst(selected_df)
+        
+        
         # --- SUM CATEGORY ---
         
-        st.subheader('kategoria osszesites', divider='gray')
+        st.subheader('Összesített kategóriák', divider='gray')
 
-        summ_category = selected_df[['kategoria', 'netto']].groupby('kategoria', as_index=False).sum().sort_values('netto',ascending=False)
+        summ_category = selected_df[['kategoria', 'alkategoria', 'netto']].groupby('kategoria', as_index=False).sum().sort_values('netto',ascending=False).head(10)
 
-        plot_top10(
-            label='osszesitett kategoria',
-            df=summ_category,
+        #plot_top10(
+        #    df=summ_category,
+        #    x_data='netto',
+        #    y_data='kategoria',
+        #    marker_color=graph_color
+        #)
+        
+        df_categories = selected_df[['kategoria', 'alkategoria', 'netto']].groupby(['kategoria', 'alkategoria']).sum().sort_values(['kategoria', 'netto'], ascending=False).round(0).reset_index()
+        
+        detailed_bar(
+            df=df_categories,
             x_data='netto',
             y_data='kategoria',
-            marker_color=graph_color
+            color='alkategoria'
         )
+        
         
         # --- SUM SUBCATEGORY ---
         
-        st.subheader('alkategoria osszesites', divider='gray')
+        st.subheader('TOP10 alkategória', divider='gray')
 
-        summ_category = selected_df[['alkategoria', 'netto']].groupby('alkategoria', as_index=False).sum().sort_values('netto',ascending=False)
+        summ_category = selected_df[['alkategoria', 'elem', 'netto']].groupby('alkategoria', as_index=False).sum().sort_values('netto',ascending=False).head(10)
 
         plot_top10(
-            label='osszesitett kategoria',
             df=summ_category,
             x_data='netto',
             y_data='alkategoria',
             marker_color=graph_color
+            
+        )        
+        # --- SUM ITEM ---
+        
+        st.subheader('TOP10 elem', divider='gray')
+
+        summ_category = selected_df[['elem', 'netto']].groupby('elem', as_index=False).sum().sort_values('netto',ascending=False).head(10)
+
+        plot_top10(
+            df=summ_category,
+            x_data='netto',
+            y_data='elem',
+            marker_color=graph_color
+            
         )        
         
-        plot_treemap('valami',selected_df)
+        # --- CATEGORY TREEMAP ---
         
-        st.data_editor(selected_df)
+        st.subheader('Kategória faábra', divider='grey')
+        
+        plot_treemap(selected_df)
+        
+        # --- COMPARISON ---
+        
+        comp_years = df['year'].unique().tolist()
+        comp_selected_years = st.multiselect('Select years to compare', years, default=years)
+        
+            # Monthly comparison
+        monthly_data = selected_df.groupby(['year', 'month'])['netto'].sum().reset_index()
+
+        # Quarterly comparison
+        quarterly_data = selected_df.groupby(['year', 'quarter'])['netto'].sum().reset_index()
+        
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=("Monthly Cost Comparison", "Quarterly Cost Comparison"),
+            shared_yaxes=False
+        )
+
+        # Add monthly data to subplot
+        for year in comp_selected_years:
+            year_data = monthly_data[monthly_data['year'] == year]
+            fig.add_trace(
+                go.Bar(x=year_data['month'], y=year_data['netto'], name=f"Year {year}", legendgroup=f"Year {year}"),
+                row=1, col=1
+            )
+
+        # Add quarterly data to subplot
+        for year in comp_selected_years:
+            year_data = quarterly_data[quarterly_data['year'] == year]
+            fig.add_trace(
+                go.Bar(x=year_data['quarter'], y=year_data['netto'], name=f"Year {year}", legendgroup=f"Year {year}"),
+                row=1, col=2
+            )
+
+        # Update layout
+        fig.update_layout(barmode='group', title="Monthly and Quarterly Cost Comparison", showlegend=True)
+
+        st.plotly_chart(fig)
+        
+        st.dataframe(selected_df)
+        
