@@ -2,7 +2,14 @@ import streamlit as st
 import pandas as pd
 
 # --- CONFIG ---
-st.set_page_config(page_title="Adatfeltöltés", layout="wide")
+st.set_page_config(page_title="Adatfeltöltés", layout="wide", page_icon='dragon')
+
+hide_decoration_bar_style = '''
+    <style>
+        header {visibility: hidden;}
+    </style>
+'''
+st.markdown(hide_decoration_bar_style, unsafe_allow_html=True)
 
 # --- SESSION VARIABLES ---
 
@@ -48,6 +55,19 @@ def income_clean(df_inc_data, df_inc_cat):
     df_income['year'] = pd.DatetimeIndex(df_income['datum']).year
     df_income['month'] = pd.DatetimeIndex(df_income['datum']).month
     df_income['quarter'] = pd.DatetimeIndex(df_income['datum']).quarter
+    df_income['month_year'] = df_income['datum'].dt.to_period('m')
+    
+    df_income['kat_kod'] = df_income['kat_kod'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_income['kat_kod'] = df_income['kat_kod'].fillna('hiányos')
+    df_income['kategoria'] = df_income['kategoria'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_income['kategoria'] = df_income['kategoria'].fillna('hiányos')
+    df_income['alkategoria'] = df_income['alkategoria'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_income['alkategoria'] = df_income['alkategoria'].fillna('hiányos')
+    df_income['elem'] = df_income['elem'].apply(lambda x: str(x) if pd.notnull(x) else None)
+    df_income['elem'] = df_income['elem'].fillna('hiányos')
+    
+    df_income = df_income.rename(columns={'teljes_forintban': 'netto'})
+    
     return df_income
 
 def expense_clean(df_exp_data, df_exp_cat):
@@ -75,9 +95,9 @@ def expense_clean(df_exp_data, df_exp_cat):
 
 # --- MAIN SITE ---
 
-st.header('Adat feltöltés', divider='grey')
+st.title('Adat feltöltés')
 
-st.write('')
+st.divider()
 
 info1, info2 = st.columns((2,1), gap='large')
 
@@ -87,6 +107,7 @@ with info1:
     st.write('3. Az első sor az oszlopazonosító, szűrési és paraméterezési adatok.')
     st.write('4. Az adat beolvasás az A:1 cellával kezdődik, így az adatnak is ott kell kezdődnie')
     st.write('5. A feltöltött excel táblák az első sorának egyeznie kell a mintában található oszlop nevekkel!')
+    st.write('6. A szükséges excel táblák feltöltése és összefűzése után használható az alkalmazás.')
     
 with info2:
     #Income data
@@ -308,6 +329,8 @@ with emp2.expander('Létszám adatok'):
             if st.button('Létszám adatok mentése', use_container_width=True):
                 df_employees = temp_df_employees
                 del temp_df_employees
+                df_employees['month_year'] = df_employees['datum'].dt.to_period('m')
+                df_employees = df_employees.drop(['datum'], axis=1)
                 st.session_state['df_employees'] = df_employees
                 st.rerun()
         else:

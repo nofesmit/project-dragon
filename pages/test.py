@@ -38,6 +38,7 @@ monthly_data = filtered_data.groupby(['year', 'month', 'category'])['cost'].sum(
 # Quarterly comparison
 quarterly_data = filtered_data.groupby(['year', 'quarter', 'category'])['cost'].sum().reset_index()
 
+
 # Create subplots
 fig = make_subplots(
     rows=1, cols=2,
