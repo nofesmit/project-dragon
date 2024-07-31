@@ -318,7 +318,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -365,7 +365,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -540,7 +540,7 @@ else:
         kat_kodok = sorted(df['kat_kod'].unique())
 
     partner = sorted(df['partner'].unique())
-    partnerek = cfcol4.multiselect('Partnert', options=partner, placeholder='Válassz partnert')
+    partnerek = cfcol4.multiselect('Partner', options=partner, placeholder='Válassz partnert')
     if len(partnerek) == 0:
         partnerek = sorted(df['partner'].unique())
 
@@ -619,17 +619,17 @@ else:
             st.write('')
             sumcol3, sumcol4, sumcol5 = st.columns((1,1,1), gap='large')
         
-            # --- TOTAL EXPENSE ---
+            # --- TOTAL INCOME ---
 
             with sumcol1:
                 
                 total_df = selected_df.groupby(['month_year'], as_index=False)['netto'].sum().round(0)
-                total_expense = selected_df['netto'].sum().round(0)
+                total_income = selected_df['netto'].sum().round(0)
                 
                 st.subheader('Teljes kiadás', divider='grey')
                 total_netto(
                     label='Teljes kiadás',
-                    value=total_expense,
+                    value=total_income,
                     suffix=' Ft',
                     show_graph=True,
                     graph_x=total_df['month_year'],

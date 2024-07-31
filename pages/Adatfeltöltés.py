@@ -330,6 +330,8 @@ with emp2.expander('Létszám adatok'):
                 df_employees = temp_df_employees
                 del temp_df_employees
                 df_employees['month_year'] = df_employees['datum'].dt.to_period('m')
+                df_employees['year'] = pd.DatetimeIndex(df_employees['datum']).year
+                df_employees['quarter'] = pd.DatetimeIndex(df_employees['datum']).quarter
                 df_employees = df_employees.drop(['datum'], axis=1)
                 st.session_state['df_employees'] = df_employees
                 st.rerun()

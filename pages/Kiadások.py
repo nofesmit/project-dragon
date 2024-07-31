@@ -318,7 +318,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -365,7 +365,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -412,7 +412,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -463,7 +463,7 @@ def table_formating():
                     """,
                     unsafe_allow_html=True
                 )
-  
+
 # --- PAGE ---
 
 st.title('Kiadások')
@@ -546,7 +546,7 @@ else:
         kat_kodok = sorted(df['kat_kod'].unique())
 
     partner = sorted(df['partner'].unique())
-    partnerek = pfcol1.multiselect('Partnert', options=partner, placeholder='Válassz partnert')
+    partnerek = pfcol1.multiselect('Partner', options=partner, placeholder='Válassz partnert')
     if len(partnerek) == 0:
         partnerek = sorted(df['partner'].unique())
 
