@@ -18,6 +18,11 @@ hide_decoration_bar_style = '''
 '''
 st.markdown(hide_decoration_bar_style, unsafe_allow_html=True)
 
+try:
+    locale.setlocale(locale.LC_TIME, 'hu_HU.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_TIME, 'C')  # Fallback to default
+
 # --- THEME ---
 
 graph_color = '#30826B'

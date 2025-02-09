@@ -9,7 +9,7 @@ import locale
 
 # --- CONFIG ---
 
-st.set_page_config(page_title="Kiadások", layout="wide", page_icon='dragon')
+st.set_page_config(page_title="Bevételek", layout="wide", page_icon='dragon')
 
 hide_decoration_bar_style = '''
     <style>
@@ -17,6 +17,11 @@ hide_decoration_bar_style = '''
     </style>
 '''
 st.markdown(hide_decoration_bar_style, unsafe_allow_html=True)
+
+try:
+    locale.setlocale(locale.LC_TIME, 'hu_HU.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_TIME, 'C')  # Fallback to default
 
 # --- THEME ---
 
@@ -412,7 +417,7 @@ def comparison(df, type, years, comp_cats, comp_subcats, comp_items):
                         y=year_cat_data['netto'], 
                         name=f"{year} - {category}", 
                         legendgroup=f"{year} - {category}",
-                        hovertemplate='<b>%{customdata[0]} %{x} (%{customdata[2]})</b><br>' +
+                        hovertemplate='<b>%{customdata[0]} Q%{x} (%{customdata[2]})</b><br>' +
                                       '%{customdata[1]}<br>' +
                                       'Netto: %{y:,.0f} Ft<extra></extra>',
                         customdata=np.column_stack((
@@ -466,27 +471,26 @@ def table_formating():
 
 # --- PAGE ---
 
-st.title('Kiadások')
+st.title('Bevételek')
 st.divider()
 
 # --- SESSION VARIABLES ---
 
-if 'df_expense' not in st.session_state:
+if 'df_income' not in st.session_state:
     st.subheader('Nincs feltöltve vizsgálandó adat.')
     st.write('')
     st.write('Az adatok feltöltéséhez kattintson az alábbi gonbra:')
     st.write('')
     st.page_link('pages/Adatfeltöltés.py', label=' Adatfeltöltés', icon='📝')
 else:
-    df = st.session_state['df_expense']
-   
+    df = st.session_state['df_income']
+    
     # --- FILTERING ---
     with st.expander('Keresés és szűrés'):
         st.markdown('**A szűrési feltételek kiválaszhatók a legürgülő listából, de a mezőbe kattintva be lehet írni a keresett elemet, majd arra rákattintva kiválasztani.**')
         yfcol1, yfcol2, yfcol3 = st.columns((1,1,1), gap='medium')
         cfcol1, cfcol2, cfcol3 = st.columns((1,1,1), gap='medium')
-        cfcol4, cfcol5 = st.columns((1,1), gap='medium')
-        pfcol1, pfcol2, = st.columns((10,2))
+        cfcol4, cfcol5, cfcol6 = st.columns((3,1,1), gap='medium')
     
 # --- TIME FILTERS ---
 
@@ -534,11 +538,6 @@ else:
     elemek = cfcol3.multiselect('Kategória elem', options=elem, placeholder='Válassz kategória elemet')
     if len(elemek) == 0:
         elemek = sorted(df['elem'].unique())
-
-    fo_kat = sorted(df['fo_kat'].unique())
-    fo_katok = cfcol4.multiselect('Fő kategória', options=fo_kat, placeholder='Válassz fő kategóriát', help='A 0. kategória a nem besorolt!')
-    if len(fo_katok) == 0:
-        fo_katok = sorted(df['fo_kat'].unique())
     
     kat_kod = sorted(df['kat_kod'].unique())
     kat_kodok = cfcol5.multiselect('Kategória kód', options=kat_kod, placeholder='Válassz kategória kódot')
@@ -546,18 +545,17 @@ else:
         kat_kodok = sorted(df['kat_kod'].unique())
 
     partner = sorted(df['partner'].unique())
-    partnerek = pfcol1.multiselect('Partner', options=partner, placeholder='Válassz partnert')
+    partnerek = cfcol4.multiselect('Partner', options=partner, placeholder='Válassz partnert')
     if len(partnerek) == 0:
         partnerek = sorted(df['partner'].unique())
 
-    in_or_not = pfcol2.selectbox('Szűrés típusa', options=['Tartalmazza','Kivéve'], help='Kivéve esetén ha nincs megadott feltétel, akkor nem jelenik meg adat! Először adja meg a kivételt, utána álltsa a mezőt Kivéve értékre!')
+    in_or_not = cfcol6.selectbox('Szűrés típusa', options=['Tartalmazza','Kivéve'], help='Kivéve esetén ha nincs megadott feltétel, akkor nem jelenik meg adat! Először adja meg a kivételt, utána álltsa a mezőt Kivéve értékre!')
     
     if in_or_not == 'Tartalmazza':
         selected_df = df[
             (df['year'].isin(years)) &
             (df['quarter'].isin(selected_quarters)) &
             (df['month'].isin(selected_months)) &
-            (df['fo_kat'].isin(fo_katok)) &
             (df['kat_kod'].isin(kat_kodok)) &
             (df['kategoria'].isin(kategoriak)) &
             (df['alkategoria'].isin(alkategoriak)) &
@@ -568,7 +566,6 @@ else:
             (~df['year'].isin(years)) |
             (~df['quarter'].isin(selected_quarters)) |
             (~df['month'].isin(selected_months)) |
-            (~df['fo_kat'].isin(fo_katok)) |
             (~df['kat_kod'].isin(kat_kodok)) |
             (~df['kategoria'].isin(kategoriak)) |
             (~df['alkategoria'].isin(alkategoriak)) |
@@ -579,6 +576,7 @@ else:
         st.divider()
         st.error('A kiválasztott szűrési feltételeknek megfelelő adat nem létezik, ellenőrizze a beállított szűrési feltételeket! Kizáró szűrés esetén először meg kell adni a kizárt feltételt!')
     else:
+        
         selected_df['percentage'] = (selected_df['netto'] / selected_df['netto'].sum()) * 100
         
         
@@ -603,18 +601,18 @@ else:
         df_item_data['netto'] = df_item_data['netto'].apply(lambda x: f"{int(x):,} Ft")
         df_item_data['percentage'] = df_item_data['percentage'].round(2)
         df_item_data['percentage'] = df_item_data['percentage'].apply(lambda x: f"{x:.2f}%")
-        df_item_data = df_item_data.rename(columns={'netto': 'Nettó', 'percentage': 'Százalék'})
+        df_item_data = df_item_data.rename(columns={'netto': 'Nettó', 'percentage': 'Százalék'})       
         
         df_partner_data = selected_df[['partner', 'netto', 'percentage']].groupby(['partner']).sum().sort_values(['netto'], ascending=False)
         df_partner_data['netto'] = df_partner_data['netto'].round(0)
         df_partner_data['netto'] = df_partner_data['netto'].apply(lambda x: f"{int(x):,} Ft")
         df_partner_data['percentage'] = df_partner_data['percentage'].round(2)
         df_partner_data['percentage'] = df_partner_data['percentage'].apply(lambda x: f"{x:.2f}%")
-        df_partner_data = df_partner_data.rename(columns={'netto': 'Nettó', 'percentage': 'Százalék'})      
+        df_partner_data = df_partner_data.rename(columns={'netto': 'Nettó', 'percentage': 'Százalék'})  
             
 # --- TABS ---
 
-        tabs = st.tabs(['Összesítő adatok','Napsugár diagram','Napsugár diagram összehasonlítás', 'Összesített kategória','Összesített alkategória','Összesített elem','Összehasonlítás','Vizsgált adatok'], )
+        tabs = st.tabs(['Összesítő adatok','Napsugár diagram','Napsugár diagram összehasonlítás', 'Összesített kategória','Összesített alkategória','Összesített elem','Összehasonlítás','Vizsgált adatok'])
         
     ### Osszesito adatok
         
@@ -626,17 +624,17 @@ else:
             st.write('')
             sumcol3, sumcol4, sumcol5 = st.columns((1,1,1), gap='large')
         
-            # --- TOTAL EXPENSE ---
+            # --- TOTAL INCOME ---
 
             with sumcol1:
                 
                 total_df = selected_df.groupby(['month_year'], as_index=False)['netto'].sum().round(0)
-                total_expense = selected_df['netto'].sum().round(0)
+                total_income = selected_df['netto'].sum().round(0)
                 
                 st.subheader('Teljes kiadás', divider='grey')
                 total_netto(
                     label='Teljes kiadás',
-                    value=total_expense,
+                    value=total_income,
                     suffix=' Ft',
                     show_graph=True,
                     graph_x=total_df['month_year'],
@@ -676,6 +674,8 @@ else:
                     st.subheader('Elemek nettó és százalékos megoszlása', divider='grey')
                     st.table(df_item_data)
                     table_formating()
+        
+        ### SUNBURST
         
         with tabs[1]:
             
@@ -828,6 +828,7 @@ else:
                         netto_y_formatted = f"{values['netto_y']:,.0f} Ft"
                         diff_formated  = f"{values['diff']:,.2f} %"
                         st.metric(f'{key}',value=netto_y_formatted ,delta=diff_formated)
+
         
         ### CATEGORY
         
