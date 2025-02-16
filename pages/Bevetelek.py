@@ -481,7 +481,7 @@ if 'df_income' not in st.session_state:
     st.write('')
     st.write('Az adatok feltöltéséhez kattintson az alábbi gonbra:')
     st.write('')
-    st.page_link('pages/Adatfeltöltés.py', label=' Adatfeltöltés', icon='📝')
+    st.page_link('pages/Adatfeltoltes.py', label=' Adatfeltöltés', icon='📝')
 else:
     df = st.session_state['df_income']
     

@@ -719,7 +719,7 @@ if 'df_income' and 'df_expense' not in st.session_state:
     st.write('')
     st.write('Az adatok feltöltéséhez kattintson az alábbi gonbra:')
     st.write('')
-    st.page_link('pages/Adatfeltöltés.py', label=' Adatfeltöltés', icon='📝')
+    st.page_link('pages/Adatfeltoltes.py', label=' Adatfeltöltés', icon='📝')
 else:
     df_income = st.session_state['df_income']
     df_expense = st.session_state['df_expense']
@@ -974,7 +974,7 @@ else:
             st.write('')
             st.write('Az adatok feltöltéséhez kattintson az alábbi gonbra:')
             st.write('')
-            st.page_link('pages/Adatfeltöltés.py', label=' Adatfeltöltés', icon='📝')
+            st.page_link('pages/Adatfeltoltes.py', label=' Adatfeltöltés', icon='📝')
         else:
             df_employees = st.session_state['df_employees']
             emp_type = st.selectbox('Viszonyítási csoport', options=['Vám','Pénzügy','Egyéb','Összes'])
